@@ -1,4 +1,5 @@
 import os
+import json
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QComboBox, QRadioButton, QButtonGroup, QHBoxLayout, QMenuBar, QAction, QFileDialog, QMessageBox
 from .flashcard_window import FlashCardWindow
 
@@ -10,11 +11,12 @@ class FlashCardApp(QMainWindow):  # Inherit from QMainWindow for menu bar functi
         self.current_index = 0
         self.flashcard_files = []
         self.flashcard_directory = None
+        self.json_path = "flashcard_results.json"
         self.initUI()
 
     def initUI(self):
         self.setWindowTitle("Flashcard - Start Menu")
-        self.setGeometry(100, 100, 400, 300)
+        self.setGeometry(100, 100, 400, 350)
 
         # Create a central widget and set layout
         central_widget = QWidget()
@@ -46,15 +48,18 @@ class FlashCardApp(QMainWindow):  # Inherit from QMainWindow for menu bar functi
         mode_layout = QHBoxLayout()
         self.random_radio = QRadioButton("Random")
         self.sequential_radio = QRadioButton("Sequential")
+        self.load_incorrect_radio = QRadioButton("Load Incorrect")  # New radio button
         self.random_radio.setChecked(True)  # Default to random selection
         mode_layout.addWidget(self.random_radio)
         mode_layout.addWidget(self.sequential_radio)
+        mode_layout.addWidget(self.load_incorrect_radio)  # Add to layout
         layout.addLayout(mode_layout)
 
         # Button group for the radio buttons
         self.mode_group = QButtonGroup(self)
         self.mode_group.addButton(self.random_radio)
         self.mode_group.addButton(self.sequential_radio)
+        self.mode_group.addButton(self.load_incorrect_radio)  # Add to group
 
         # Instruction label for start button
         start_label = QLabel("Click Start to Begin:", self)
@@ -94,7 +99,10 @@ class FlashCardApp(QMainWindow):  # Inherit from QMainWindow for menu bar functi
         self.selected_folder = self.folder_combo.currentText()
         self.is_random = self.random_radio.isChecked()
 
-        if self.selected_folder:
+        if self.load_incorrect_radio.isChecked():
+            # Load only incorrect flashcards
+            self.load_incorrect_flashcards()
+        elif self.selected_folder:
             # Prepare the flashcard list based on the selected folder
             flashcard_folder = os.path.join(self.flashcard_directory, self.selected_folder)
             self.flashcard_files = self.get_flashcard_files(flashcard_folder)
@@ -103,6 +111,23 @@ class FlashCardApp(QMainWindow):  # Inherit from QMainWindow for menu bar functi
             self.open_flashcard_window()
         else:
             QMessageBox.warning(self, "No Folder Selected", "Please select a folder within the directory to continue.")
+
+    def load_incorrect_flashcards(self):
+        # Load incorrect flashcards based on the JSON file
+        if os.path.exists(self.json_path):
+            with open(self.json_path, "r") as file:
+                results = json.load(file)
+                incorrect_files = [file for file, correct in results.get("flashcards", {}).items() if not correct and file.startswith(os.path.join(self.flashcard_directory, self.selected_folder))]
+                
+                if not incorrect_files:
+                    QMessageBox.information(self, "No Incorrect Answers", "You have no flashcards marked as incorrect in this folder.")
+                    return
+
+                # Load the incorrect flashcards
+                self.flashcard_files = incorrect_files
+                self.open_flashcard_window()
+        else:
+            QMessageBox.information(self, "No Results Found", "No previous flashcard results found.")
 
     def get_flashcard_files(self, folder):
         # List to hold all text file paths in the selected folder

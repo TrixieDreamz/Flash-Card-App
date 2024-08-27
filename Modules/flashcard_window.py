@@ -1,11 +1,12 @@
 import os
 import random
+import json
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QCheckBox, QHBoxLayout
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 
 class FlashCardWindow(QWidget):
-    def __init__(self, flashcard_files, is_random):
+    def __init__(self, flashcard_files, is_random, json_path="flashcard_results.json"):
         super().__init__()
         self.flashcard_files = flashcard_files
         self.is_random = is_random
@@ -13,6 +14,10 @@ class FlashCardWindow(QWidget):
         self.current_file = None
         self.correct_answers = 0
         self.incorrect_answers = 0
+        self.json_path = json_path
+
+        # Load existing results from the JSON file or create a new one
+        self.load_or_create_json()
 
         if self.is_random:
             self.current_file = random.choice(self.flashcard_files)
@@ -69,13 +74,23 @@ class FlashCardWindow(QWidget):
         # Show the question initially
         self.show_question()
 
+    def load_or_create_json(self):
+        # Load existing results from the JSON file or create a new one
+        if os.path.exists(self.json_path):
+            with open(self.json_path, "r") as file:
+                self.results = json.load(file)
+        else:
+            self.results = {"flashcards": {}}
+
+    def save_json(self):
+        # Save the current results to the JSON file
+        with open(self.json_path, "w") as file:
+            json.dump(self.results, file, indent=4)
+
     def load_flashcard(self, filepath):
         try:
             with open(filepath, "r") as file:
                 lines = file.readlines()
-
-                # Debug: Print the lines read from the file
-                print("File content:", lines)
 
                 # Find the indices of "Question:" and "Answer:"
                 question_index = None
@@ -125,18 +140,14 @@ class FlashCardWindow(QWidget):
     def mark_correct(self, state):
         if state == Qt.Checked:
             self.wrong_checkbox.setChecked(False)
-            self.correct_answers += 1
-            print(f"Correct Answers: {self.correct_answers}")
-        else:
-            self.correct_answers -= 1
+            self.results["flashcards"][self.current_file] = True
+            self.save_json()
 
     def mark_incorrect(self, state):
         if state == Qt.Checked:
             self.right_checkbox.setChecked(False)
-            self.incorrect_answers += 1
-            print(f"Incorrect Answers: {self.incorrect_answers}")
-        else:
-            self.incorrect_answers -= 1
+            self.results["flashcards"][self.current_file] = False
+            self.save_json()
 
     def next_flashcard(self):
         if self.is_random:
