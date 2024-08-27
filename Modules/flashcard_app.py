@@ -2,6 +2,7 @@ import os
 import json
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QComboBox, QRadioButton, QButtonGroup, QHBoxLayout, QMenuBar, QAction, QFileDialog, QMessageBox, QInputDialog
 from .flashcard_window import FlashCardWindow
+from .flashcard_creator import FlashCardCreator  # Import the new FlashCardCreator module
 
 class FlashCardApp(QMainWindow):  # Inherit from QMainWindow for menu bar functionality
     def __init__(self):
@@ -18,7 +19,7 @@ class FlashCardApp(QMainWindow):  # Inherit from QMainWindow for menu bar functi
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle("Super Awesome Flash Card App")
+        self.setWindowTitle("Flashcard - Start Menu")
         self.setGeometry(100, 100, 400, 150)
 
         # Create a central widget and set layout
@@ -39,6 +40,12 @@ class FlashCardApp(QMainWindow):  # Inherit from QMainWindow for menu bar functi
         clear_results_action = QAction('Clear Results', self)
         clear_results_action.triggered.connect(self.clear_results)
         file_menu.addAction(clear_results_action)
+
+        # Flashcards menu
+        flashcards_menu = menubar.addMenu('Flashcards')
+        create_flashcards_action = QAction('Create New Flashcards', self)
+        create_flashcards_action.triggered.connect(self.create_flashcards)
+        flashcards_menu.addAction(create_flashcards_action)
 
         # Settings menu
         settings_menu = menubar.addMenu('Settings')
@@ -131,6 +138,10 @@ class FlashCardApp(QMainWindow):  # Inherit from QMainWindow for menu bar functi
 
         else:
             QMessageBox.information(self, "No Results Found", "No results file found to clear.")
+    
+    def create_flashcards(self):
+        flashcard_creator = FlashCardCreator(self.flashcard_directory)
+        flashcard_creator.start_flashcard_creation()
 
     def select_flashcard_directory(self):
         # Open a dialog to select the flashcard directory
@@ -218,19 +229,28 @@ class FlashCardApp(QMainWindow):  # Inherit from QMainWindow for menu bar functi
         else:
             QMessageBox.information(self, "No Results Found", "No previous flashcard results found.")
 
-    def get_flashcard_files(self, folder):
-        # List to hold all text file paths in the selected folder
-        flashcard_files = []
+    def get_flashcard_files(self, folder=None):
+        while True:
+            if not folder:
+                folder = QFileDialog.getExistingDirectory(self, "Select Flashcard Folder", self.flashcard_directory)
+            
+            if not folder:
+                QMessageBox.warning(self, "No Folder Selected", "You must select a folder containing flashcard text files.")
+                continue  # Prompt again
 
-        for root, dirs, files in os.walk(folder):
-            for file in files:
-                if file.endswith(".txt"):
-                    flashcard_files.append(os.path.join(root, file))
+            # List to hold all text file paths in the selected folder
+            flashcard_files = []
 
-        if not flashcard_files:
-            raise FileNotFoundError("No flashcard text files found in the selected directory.")
+            for root, dirs, files in os.walk(folder):
+                for file in files:
+                    if file.endswith(".txt"):
+                        flashcard_files.append(os.path.join(root, file))
 
-        return flashcard_files
+            if not flashcard_files:
+                QMessageBox.warning(self, "No Flashcards Found", "The selected folder does not contain any flashcard text files. Please select another folder.")
+                folder = None  # Reset folder to prompt again
+            else:
+                return flashcard_files
 
     def open_flashcard_window(self):
         # Create a new flashcard window
