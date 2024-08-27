@@ -38,7 +38,12 @@ class FlashCardApp(QMainWindow):  # Inherit from QMainWindow for menu bar functi
 
         # Folder selection dropdown
         self.folder_combo = QComboBox(self)
+        self.folder_combo.currentIndexChanged.connect(self.update_flashcard_count)
         layout.addWidget(self.folder_combo)
+
+        # Label to show the number of flashcards in the selected folder
+        self.flashcard_count_label = QLabel("Number of Flashcards: 0", self)
+        layout.addWidget(self.flashcard_count_label)
 
         # Instruction label for mode selection
         mode_label = QLabel("Select Mode:", self)
@@ -88,6 +93,17 @@ class FlashCardApp(QMainWindow):  # Inherit from QMainWindow for menu bar functi
                 break  # Only consider the first level of directories
         else:
             print(f"Path does not exist: {flashcard_folder}")
+
+    def update_flashcard_count(self):
+        # Update the label showing the number of flashcards in the selected folder
+        if self.flashcard_directory:
+            selected_folder = self.folder_combo.currentText()
+            if selected_folder:
+                folder_path = os.path.join(self.flashcard_directory, selected_folder)
+                flashcard_files = self.get_flashcard_files(folder_path)
+                self.flashcard_count_label.setText(f"Number of Flashcards: {len(flashcard_files)}")
+            else:
+                self.flashcard_count_label.setText("Number of Flashcards: 0")
 
     def start_flashcards(self):
         # Check if the flashcard directory has been selected
