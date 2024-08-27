@@ -1,6 +1,6 @@
 import os
 import json
-from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QComboBox, QRadioButton, QButtonGroup, QHBoxLayout, QMenuBar, QAction, QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QComboBox, QRadioButton, QButtonGroup, QHBoxLayout, QMenuBar, QAction, QFileDialog, QMessageBox, QInputDialog
 from .flashcard_window import FlashCardWindow
 
 class FlashCardApp(QMainWindow):  # Inherit from QMainWindow for menu bar functionality
@@ -12,11 +12,14 @@ class FlashCardApp(QMainWindow):  # Inherit from QMainWindow for menu bar functi
         self.flashcard_files = []
         self.flashcard_directory = None
         self.json_path = "flashcard_results.json"
+        self.typing_speed = 50  # Default typing speed (characters per second)
+        self.sound_enabled = True  # Default sound setting
+
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle("Flashcard - Start Menu")
-        self.setGeometry(100, 100, 400, 350)
+        self.setWindowTitle("Super Awesome Flash Card App")
+        self.setGeometry(100, 100, 400, 150)
 
         # Create a central widget and set layout
         central_widget = QWidget()
@@ -25,12 +28,31 @@ class FlashCardApp(QMainWindow):  # Inherit from QMainWindow for menu bar functi
 
         # Create a menu bar
         menubar = self.menuBar()
-        file_menu = menubar.addMenu('File')
 
-        # Add the "Select Directory" action to the File menu
+        # File menu
+        file_menu = menubar.addMenu('File')
         select_dir_action = QAction('Select Flashcard Directory', self)
         select_dir_action.triggered.connect(self.select_flashcard_directory)
         file_menu.addAction(select_dir_action)
+
+        # Clear Results action
+        clear_results_action = QAction('Clear Results', self)
+        clear_results_action.triggered.connect(self.clear_results)
+        file_menu.addAction(clear_results_action)
+
+        # Settings menu
+        settings_menu = menubar.addMenu('Settings')
+
+        # Adjust typing speed action
+        adjust_speed_action = QAction('Adjust Typing Speed', self)
+        adjust_speed_action.triggered.connect(self.adjust_typing_speed)
+        settings_menu.addAction(adjust_speed_action)
+
+        # Toggle sound action
+        self.toggle_sound_action = QAction('Enable Sounds', self, checkable=True)
+        self.toggle_sound_action.setChecked(self.sound_enabled)
+        self.toggle_sound_action.triggered.connect(self.toggle_sound)
+        settings_menu.addAction(self.toggle_sound_action)
 
         # Instruction label for folder selection
         folder_label = QLabel("Select Folder:", self)
@@ -75,6 +97,41 @@ class FlashCardApp(QMainWindow):  # Inherit from QMainWindow for menu bar functi
         self.start_button.clicked.connect(self.start_flashcards)
         layout.addWidget(self.start_button)
 
+    def clear_results(self):
+        """Clear results from the JSON file based on the selected category."""
+        if not self.selected_folder:
+            QMessageBox.information(self, "No Folder Selected", "Please select a folder to clear results.")
+            return
+
+        if os.path.exists(self.json_path):
+            with open(self.json_path, "r") as file:
+                results = json.load(file)
+
+            # Extract the category name from the selected folder
+            selected_category = self.selected_folder
+
+            # Prompt the user to confirm deletion of the category
+            reply = QMessageBox.question(
+                self, 'Clear Results', 
+                f"Do you want to clear the results for category '{selected_category}'?", 
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+            )
+
+            if reply == QMessageBox.Yes:
+                # Remove all entries for the selected category
+                results["flashcards"] = {k: v for k, v in results["flashcards"].items() if selected_category not in k}
+
+                # Save the updated results back to the JSON file
+                with open(self.json_path, "w") as file:
+                    json.dump(results, file, indent=4)
+
+                QMessageBox.information(self, "Results Cleared", f"Results for category '{selected_category}' have been cleared.")
+            else:
+                QMessageBox.information(self, "Results Not Cleared", f"Results for category '{selected_category}' have not been cleared.")
+
+        else:
+            QMessageBox.information(self, "No Results Found", "No results file found to clear.")
+
     def select_flashcard_directory(self):
         # Open a dialog to select the flashcard directory
         dir_path = QFileDialog.getExistingDirectory(self, "Select Flashcard Directory")
@@ -99,11 +156,27 @@ class FlashCardApp(QMainWindow):  # Inherit from QMainWindow for menu bar functi
         if self.flashcard_directory:
             selected_folder = self.folder_combo.currentText()
             if selected_folder:
+                self.selected_folder = selected_folder  # Update the selected folder
                 folder_path = os.path.join(self.flashcard_directory, selected_folder)
                 flashcard_files = self.get_flashcard_files(folder_path)
                 self.flashcard_count_label.setText(f"Number of Flashcards: {len(flashcard_files)}")
             else:
                 self.flashcard_count_label.setText("Number of Flashcards: 0")
+
+    def adjust_typing_speed(self):
+        # Open an input dialog to adjust the typing speed
+        speed, ok = QInputDialog.getInt(self, "Adjust Typing Speed", "Enter characters per second:", self.typing_speed, 10, 200, 1)
+        if ok:
+            self.typing_speed = speed
+            print(f"Typing speed adjusted to: {self.typing_speed} characters per second")
+
+    def toggle_sound(self):
+        # Toggle sound on or off
+        self.sound_enabled = not self.sound_enabled
+        if self.sound_enabled:
+            self.toggle_sound_action.setText("Disable Sounds")
+        else:
+            self.toggle_sound_action.setText("Enable Sounds")
 
     def start_flashcards(self):
         # Check if the flashcard directory has been selected
@@ -161,5 +234,5 @@ class FlashCardApp(QMainWindow):  # Inherit from QMainWindow for menu bar functi
 
     def open_flashcard_window(self):
         # Create a new flashcard window
-        self.flashcard_window = FlashCardWindow(self.flashcard_files, self.is_random)
+        self.flashcard_window = FlashCardWindow(self.flashcard_files, self.is_random, typing_speed=self.typing_speed, sound_enabled=self.sound_enabled)
         self.flashcard_window.show()
