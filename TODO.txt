@@ -6,3 +6,4 @@ Make sure to create a folder named Flash Cards.  Create sub folders inside of th
 
 
 LOCK THE SIZE OF THE MENU GUI AND THE SIZE OF THE NOTECARD
+FIX THE ABILITY OF THE USER TO INIFINITELY CLICK BUTTONS. IT BREAKS THE PROGRAM LOL
