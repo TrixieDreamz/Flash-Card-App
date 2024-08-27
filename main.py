@@ -11,6 +11,7 @@ class FlashCardApp(QWidget):
         self.initUI()
 
     def initUI(self):
+        # Set the window title with a placeholder (will be updated later)
         self.setWindowTitle("Flashcard")
         self.setGeometry(100, 100, 800, 600)  # Increase the window size for better visibility
 
@@ -42,6 +43,9 @@ class FlashCardApp(QWidget):
         base_dir = os.path.dirname(os.path.abspath(__file__))  # Get the directory of the current script
         flashcard_folder = os.path.join(base_dir, "Flash Card")
         random_file = self.get_random_flashcard(flashcard_folder)
+
+        # Update the window title with the file name
+        self.setWindowTitle(f"Flashcard - {os.path.basename(random_file)}")
 
         # Load the question and answer from the randomly selected file
         self.load_flashcard(random_file)
