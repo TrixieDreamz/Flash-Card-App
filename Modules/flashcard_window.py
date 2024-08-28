@@ -70,6 +70,9 @@ class FlashCardWindow(QWidget):
         self.text_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.text_label.setStyleSheet("font-size: 36px; color: black;")
         self.text_label.setGeometry(20, 70, self.width() - 40, self.height() - 150)
+        
+        # Enable word wrap
+        self.text_label.setWordWrap(True)
 
         # Checkboxes for marking right or wrong answers
         checkbox_layout = QHBoxLayout()
