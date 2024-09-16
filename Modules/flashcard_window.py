@@ -19,6 +19,8 @@ class FlashCardWindow(QWidget):
         self.typing_speed = typing_speed
         self.sound_enabled = sound_enabled
         self.topic = ""
+        self.typing_timer = None
+        self.is_typing = False
 
         # Initialize results dictionary
         self.results = {}
@@ -147,18 +149,24 @@ class FlashCardWindow(QWidget):
         self.topic_label.setText(f"Topic: {self.topic}")
 
     def type_text(self, text):
-        self.text_label.setText("")
+        # Disable the "Next Card" button while typing is in progress
+        self.next_button.setEnabled(False)
+        self.is_typing = True
+        self.text_label.setText("")  # Clear previous text
+
         if self.sound_enabled:
-            self.typing_sound.play(-1)  # Loop the sound until typing is done
+            self.typing_sound.play(-1)  # Play typing sound if enabled
 
         def update_text(i=0):
             if i < len(text):
                 self.text_label.setText(self.text_label.text() + text[i])
-                QTimer.singleShot(int(1000 / self.typing_speed), lambda: update_text(i + 1))
+                self.typing_timer = QTimer.singleShot(int(1000 / self.typing_speed), lambda: update_text(i + 1))
             else:
                 self.typing_sound.stop()
+                self.is_typing = False  # Typing process is complete
+                self.next_button.setEnabled(True)  # Enable the "Next Card" button
 
-        update_text()
+        update_text()  # Start the typing process
 
     def show_question(self):
         self.type_text(self.question)
@@ -195,7 +203,15 @@ class FlashCardWindow(QWidget):
                 self.wrong_sound.play()
 
     def next_flashcard(self):
-        # Select the next flashcard file based on the selected mode
+        # Prevent loading the next card if typing is still happening
+        if self.is_typing:
+            return
+
+        # Stop typing when switching cards
+        if self.typing_timer:
+            self.typing_timer.stop()
+
+        # Other next flashcard logic...
         if self.is_random:
             self.current_file = random.choice(self.flashcard_files)
         else:
@@ -204,17 +220,15 @@ class FlashCardWindow(QWidget):
                 self.current_index = 0  # Loop back to the start
             self.current_file = self.flashcard_files[self.current_index]
 
-        # Reset the checkboxes when moving to the next flashcard
+        # Reset the checkboxes
         self.right_checkbox.setChecked(False)
         self.wrong_checkbox.setChecked(False)
 
-        # Update window title with new file name
+        # Update the window title and load the new flashcard
         self.setWindowTitle(f"Flashcard - {self.topic} - {os.path.basename(self.current_file)}")
-
-        # Load the new flashcard
         self.load_flashcard(self.current_file)
 
-        # Show the topic and question initially
+        # Start typing the question of the new flashcard
         self.show_topic()
         self.type_text(self.question)
 
